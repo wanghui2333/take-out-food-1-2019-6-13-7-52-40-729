@@ -1,7 +1,8 @@
 
-let s1 = null;
-let s2 = null;
-function count(db, menu, promotions, index) {
+function countDiscount(menu, index) {
+  let promotions = loadPromotions();
+  let db = loadAllItems();
+  let promotion = null;
   let money = 0;
   if (index == 1) {
     let tmpMoney = 0;
@@ -17,12 +18,18 @@ function count(db, menu, promotions, index) {
             money += element.price * food.count;
           }
           if (s.length > 0) {
-            s1 = promotions[1].type + "(" + s.substring(0, s.length - 1) + ")，" + "省" + (tmpMoney - money) + "元";
+            promotion = promotions[1].type + "(" + s.substring(0, s.length - 1) + ")，" + "省" + (tmpMoney - money) + "元";
           }
         }
       });
     });
-    return money;
+
+    let ret = {
+      money: money,
+      promotion: promotion
+    };
+
+    return ret;
   } else if (index == 2) {
     menu.forEach(food => {
       db.forEach(element => {
@@ -34,17 +41,22 @@ function count(db, menu, promotions, index) {
 
     if (money >= 30) {
       money -= 6;
-      s2 = promotions[0].type + "，" + "省6元";
-      return money;
-    } else {
-      return money;
+      promotion = promotions[0].type + "，" + "省6元";
     }
+
+    let ret = {
+      money: money,
+      promotion: promotion
+    };
+
+    return ret;
   }
 
   return 0;
 }
 
-function bestCharge(selectedItems) {
+//计算每个菜品的数量
+function calculateFoodCount(selectedItems) {
   let menu = [];
 
   selectedItems.forEach(element => {
@@ -58,8 +70,12 @@ function bestCharge(selectedItems) {
     );
   });
 
+  return menu;
+}
+
+//计算订单的明细
+function calculateOrderDetails(menu) {
   let db = loadAllItems();
-  let promotions = loadPromotions();
   let receipt = "============= 订餐明细 =============\n";
 
   menu.forEach(food => {
@@ -70,23 +86,39 @@ function bestCharge(selectedItems) {
     });
   });
   receipt += "-----------------------------------\n";
-  let m1 = count(db, menu, promotions, 1);
-  let m2 = count(db, menu, promotions, 2);
 
+  return receipt;
+}
 
-  if (m1 < m2) {
+function getBestCharge(discount1, discount2, receipt) {
+
+  if (discount1.money < discount2.money) {
     receipt += "使用优惠:\n";
-    receipt += s1 + "\n"; \
+    receipt += discount1.promotion + "\n";
     receipt += "-----------------------------------\n";
-    receipt += "总计：" + m1 + "元\n" + "===================================";
+    receipt += "总计：" + discount1.money + "元\n" + "===================================";
   } else {
-    if (s2 != null) {
+    if (discount2.promotion != null) {
       receipt += "使用优惠:\n";
-      receipt += s2 + "\n";
+      receipt += discount2.promotion + "\n";
       receipt += "-----------------------------------\n";
     }
-    receipt += "总计：" + m2 + "元\n" + "===================================";
+    receipt += "总计：" + discount2.money + "元\n" + "===================================";
   }
+
+  return receipt;
+}
+
+function bestCharge(selectedItems) {
+  let menu = calculateFoodCount(selectedItems);
+  let receipt = calculateOrderDetails(menu)
+
+  //计算打折后的价格
+  let discount1 = countDiscount(menu, 1);
+  let discount2 = countDiscount(menu, 2);
+
+  //得到最优的结果
+  receipt = getBestCharge(discount1, discount2, receipt);
 
   return receipt;
 }
